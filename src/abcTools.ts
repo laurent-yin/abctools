@@ -1,2 +1,2 @@
 // Public API for abctools
-export { getEffectiveAbcConfig } from './abcConfig';
+export { getEffectiveAbcConfig } from './abcConfig.js';

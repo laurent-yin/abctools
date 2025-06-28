@@ -1,7 +1,7 @@
 {
   "name": "abctools",
-  "version": "0.1.0",
-  "description": "Recursively scan for *.raw.abc files, merge .abcconfig, and output .abc files.",
+  "version": "0.1.4",
+  "description": "Provides utilities for music repositories using the ABC music notation, including a CLI tool to compile .raw.abc files with directives from .abcconfig files.",
   "type": "module",
   "main": "dist/assemble.js",
   "bin": {
@@ -28,5 +28,6 @@
   },
   "exports": {
     ".": "./dist/abcTools.js"
-  }
+  },
+  "types": "dist/abcTools.d.ts"
 }
