@@ -97,10 +97,12 @@ function getAbcConfigFilesUpToRoot(rootDir: string, startDir: string): string[] 
   const abcConfFiles: string[] = [];
   let dir = startDir;
   while (true) {
-    const abcConfPath = path.join(dir, '.abcconfig');
-    if (fs.existsSync(abcConfPath)) {
-      abcConfFiles.unshift(abcConfPath); // parent first
-    }
+    // Find all .abcconfig* files in this directory, sort alphabetically
+    const files = fs.readdirSync(dir)
+      .filter(f => f.startsWith('.abcconfig'))
+      .map(f => path.join(dir, f))
+      .sort();
+    abcConfFiles.unshift(...files); // parent first, sorted
     if (rootDir === dir || dir === path.dirname(dir)) break;
     dir = path.dirname(dir);
   }
@@ -108,7 +110,7 @@ function getAbcConfigFilesUpToRoot(rootDir: string, startDir: string): string[] 
 }
 
 /**
- * Finds all .abcconfig files from the directory of rawAbcFilePath up to rootDir, merges their directives with those from the ABC file,
+ * Finds all .abcconfig.* files from the directory of rawAbcFilePath up to rootDir, merges their directives with those from the ABC file,
  * and returns the merged directives as a string and the rest of the file.
  *
  * @param rootDir The root directory to stop searching for .abcconfig files
