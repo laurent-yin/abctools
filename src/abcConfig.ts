@@ -97,9 +97,9 @@ function getAbcConfigFilesUpToRoot(rootDir: string, startDir: string): string[] 
   const abcConfFiles: string[] = [];
   let dir = startDir;
   while (true) {
-    // Find all .abcconfig* files in this directory, sort alphabetically
+    // Find all *.abcconfig files in this directory, sort alphabetically
     const files = fs.readdirSync(dir)
-      .filter(f => f.startsWith('.abcconfig'))
+      .filter(f => f.endsWith('.abcconfig'))
       .map(f => path.join(dir, f))
       .sort();
     abcConfFiles.unshift(...files); // parent first, sorted
