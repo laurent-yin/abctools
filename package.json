@@ -1,0 +1,32 @@
+{
+  "name": "abctools",
+  "version": "0.1.0",
+  "description": "Recursively scan for *.raw.abc files, merge .abcconfig, and output .abc files.",
+  "type": "module",
+  "main": "dist/assemble.js",
+  "bin": {
+    "abcbuild": "bin/cli.mjs"
+  },
+  "scripts": {
+    "build": "tsc",
+    "prepare": "npm run build"
+  },
+  "files": [
+    "dist/",
+    "bin/"
+  ],
+  "keywords": [
+    "abc",
+    "build",
+    "cli"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^24.0.4",
+    "typescript": "^5.0.0"
+  },
+  "exports": {
+    ".": "./dist/abcTools.js"
+  }
+}
