@@ -115,16 +115,18 @@ function getAbcConfigFilesUpToRoot(rootDir: string, startDir: string): string[] 
  *
  * @param rootDir The root directory to stop searching for .abcconfig files
  * @param rawAbcFilePath The absolute path to the .abc file
+ * @param fileContent Optional: content of the ABC file if already read, otherwise it will be read from the file system
  */
 export function getEffectiveAbcConfig(
   rootDir: string,
-  rawAbcFilePath: string
+  rawAbcFilePath: string,
+  fileContent?: string | null
 ): { mergedDirectives: string, body: string } {
   // Use getMergedConfigParsedLines to get merged config up to the file's directory
   const mergedDirectivesLines = getMergedConfigParsedLines(rootDir, path.dirname(rawAbcFilePath));
 
-  // Extract directives from the .abc file before the first X: line
-  const abcText = fs.readFileSync(rawAbcFilePath, 'utf8');
+  // Use provided fileContent if given, otherwise read from file
+  const abcText = fileContent != null ? fileContent : fs.readFileSync(rawAbcFilePath, 'utf8');
   const { directives: abcDirectives, body, lineEnding } = extractDirectivesAndBody(abcText);
   const mergedDirectives = mergeFlatDirectives([...mergedDirectivesLines], abcDirectives);
 
