@@ -1,11 +1,11 @@
 {
   "name": "abctools",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "description": "Provides utilities for music repositories using the ABC music notation, including a CLI tool to compile .raw.abc files with directives from .abcconfig files.",
   "type": "module",
   "main": "dist/assemble.js",
   "bin": {
-    "abcbuild": "bin/cli.mjs"
+    "abctools": "bin/cli.mjs"
   },
   "scripts": {
     "build": "tsc",
