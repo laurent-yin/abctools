@@ -49,6 +49,10 @@ To see available commands:
 abctools --help
 ```
 
+## Example Repository
+
+See [choro-abc](https://github.com/laurent-yin/choro-abc) for a real-world example of a repository that uses abctools to manage and export ABC music notation files.
+
 ## License
 
 MIT
