@@ -49,6 +49,62 @@ To see available commands:
 abctools --help
 ```
 
+## Portable application APIs
+
+The existing Node `getEffectiveAbcConfig(root, file, content?)` API and CLI
+continue to assemble shared engraving configuration without personal preferences.
+
+Two browser-safe ES module entry points are available:
+
+- `abctools/config-text`: `assembleAbcText(content, parentToChildConfigs)` merges
+  supplied configuration text without accessing a filesystem. It returns
+  `{ mergedDirectives, body }` with the source line-ending convention.
+- `abctools/preferences`: versioned JSON validation/serialization, relative-path
+  validation, property-wise resolution and independent voice-filter resolution.
+
+```js
+import { parsePreferences, resolvePreferences, resolveVoiceFilter } from 'abctools/preferences';
+
+const preferences = parsePreferences(jsonText);
+const choices = resolvePreferences(preferences, 'collection/tune.raw.abc');
+const display = resolveVoiceFilter(choices.display, [
+  { id: 'melody', name: 'Melody' },
+  { id: 'bass', name: 'Counterpoint' }
+]);
+```
+
+`hideVoicesMatching` excludes voice IDs/names using case-insensitive whole-text
+wildcards (`*` for any text, `?` for one character). Blank/omitted patterns
+include all voices. Multiple patterns are separated by `;` and combine with OR;
+whitespace and empty entries are ignored. `selectedVoiceIds` is an explicit selection; an empty array
+selects none. `knownVoiceIds` records the last file inventory.
+`refreshFileVoices(fileChoices, defaults, voices)` drops stale IDs and per-voice
+notation overrides, keeps choices for surviving IDs and applies defaults to
+new IDs. Clients persist the refreshed result with their usual revision checks.
+Both display and playback support an independent `chords` boolean.
+
+Legacy `voiceIdFilter` uses exact, case-sensitive IDs. `voiceIdRegexFilter` uses
+case-insensitive ECMAScript regex patterns. Their matches combine with OR;
+empty filters or zero total matches select all available voices. Missing
+matches produce notices without changing saved preferences. Omitted properties
+inherit; arrays replace. Per-voice notation properties inherit independently.
+
+**Execute untrusted regex matching in a cancellable worker**, not on a UI thread.
+The resolver itself is synchronous and platform-neutral; it cannot enforce a
+host's execution budget. Validation checks syntax and length, not runtime cost.
+
+Preferences have `version: 1`, optional `defaults` and an optional `files` map.
+Instrument notation (`notation.instrumentKey`, plus `octaveShift` and per-voice
+`notation.voices`) can be defaulted. Song `transposition.semitones` is per file
+only, from -24 to +24. Notation transformation and rendering belong to the
+renderer adapter, not this resolver. Unknown fields, malformed regex, unsupported
+schema versions and invalid values throw explicit errors.
+
+These entry points import no Node, DOM, database or VS Code APIs. Filesystem,
+database, permissions, concurrency and synchronization belong to client adapters.
+
+Run `npm test` for core regression tests.
+
 ## Example Repository
 
 See [choro-abc](https://github.com/laurent-yin/choro-abc) for a real-world example of a repository that uses abctools to manage and export ABC music notation files.
