@@ -100,6 +100,19 @@ only, from -24 to +24. Notation transformation and rendering belong to the
 renderer adapter, not this resolver. Unknown fields, malformed regex, unsupported
 schema versions and invalid values throw explicit errors.
 
+File choices also support `tempo`, a positive whole-number BPM override with no
+configured upper bound, for example `"files": { "tune.abc": { "tempo": 90 } }`.
+Omit it to use the original authored tempo; `null`, zero, fractional/non-finite
+values and tempo defaults are rejected. `validateTempo(value)` is exported for
+client controls. Parsing, serialization, resolution and voice-inventory refresh
+all preserve this field. Existing version-1 preferences without tempo keep their
+previous behavior, and no default BPM is inserted by the resolver.
+
+The client interprets the override in the initial tune's `Q:` beat unit and
+scales later authored tempo changes proportionally. Applying playback speed and
+discovering the source tempo remain renderer responsibilities; resolving these
+preferences never changes the ABC source or the CLI's ordinary exports.
+
 These entry points import no Node, DOM, database or VS Code APIs. Filesystem,
 database, permissions, concurrency and synchronization belong to client adapters.
 

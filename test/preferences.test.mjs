@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parsePreferences, serializePreferences, resolvePreferences, resolveVoiceFilter, validateChoices, voiceNotation, refreshFileVoices, wildcardMatches } from '../dist/preferences.js';
+import { parsePreferences, serializePreferences, resolvePreferences, resolveVoiceFilter, validateChoices, validateTempo, voiceNotation, refreshFileVoices, wildcardMatches } from '../dist/preferences.js';
 import { assembleAbcText } from '../dist/configText.js';
 import { getEffectiveAbcConfig } from '../dist/abcTools.js';
 import { assembleRawAbc } from '../dist/assemble.js';
@@ -46,7 +46,8 @@ test('file inventory refresh keeps surviving choices, defaults new voices and dr
     display: { selectedVoiceIds: ['melody', 'gone'], knownVoiceIds: ['melody', 'bass', 'gone'], chords: false },
     playback: { selectedVoiceIds: [], knownVoiceIds: ['melody', 'bass', 'gone'], chords: false },
     notation: { instrumentKey: 'Bb', voices: { melody: { octaveShift: 1 }, gone: { instrumentKey: 'C' } } },
-    transposition: { semitones: 2 }
+    transposition: { semitones: 2 },
+    tempo: 75
   };
   const defaults = resolvePreferences({ version: 1, defaults: { display: { hideVoicesMatching: '*bass*' }, playback: { hideVoicesMatching: '*counter*' } } }, 'fixture.abc');
   const inventory = [...voices, { id: 'new', name: 'Counterpoint' }, { id: 'newbass' }];
@@ -57,6 +58,7 @@ test('file inventory refresh keeps surviving choices, defaults new voices and dr
   assert.equal(refreshed.playback.chords, false);
   assert.deepEqual(refreshed.notation, { instrumentKey: 'Bb', voices: { melody: { octaveShift: 1 } } });
   assert.deepEqual(refreshed.transposition, { semitones: 2 });
+  assert.equal(refreshed.tempo, 75);
   assert.deepEqual(refreshFileVoices(refreshed, defaults, inventory), refreshed);
   assert.ok(choices.notation.voices.gone);
 });
@@ -66,6 +68,39 @@ test('new preference fields validate and round trip', () => {
   for (const display of [{ hideVoicesMatching: 12 }, { selectedVoiceIds: 'melody' }, { knownVoiceIds: [3] }]) {
     assert.throws(() => validateChoices({ display }));
   }
+});
+test('tempo accepts positive whole-number BPM without a configured upper bound and is file-only', () => {
+  validateTempo(undefined);
+  for (const tempo of [1, 120, 1000000, Number.MAX_SAFE_INTEGER]) {
+    validateTempo(tempo);
+    assert.equal(validateChoices({ tempo }).tempo, tempo);
+  }
+  for (const tempo of [0, -1, 1.5, NaN, Infinity, -Infinity, '120', null]) {
+    assert.throws(() => validateTempo(tempo), /whole number/);
+    assert.throws(() => validateChoices({ tempo }), /choices.tempo.*whole number/);
+  }
+  assert.throws(() => validateChoices({ tempo: 90 }, false), /Unknown preference: choices.tempo/);
+  assert.throws(() => parsePreferences('{"version":1,"defaults":{"tempo":90}}'), /Unknown preference: defaults.tempo/);
+  assert.throws(() => validateChoices({ tempo: 90, typo: true }), /Unknown preference/);
+});
+test('per-file tempo round trips, resolves independently and resets to original by omission', () => {
+  const preferences = {
+    version: 1,
+    defaults: { notation: { instrumentKey: 'Bb' } },
+    files: { 'folder/tune.abc': { tempo: 75, transposition: { semitones: 2 } } }
+  };
+  const before = structuredClone(preferences);
+  const loaded = parsePreferences(serializePreferences(preferences));
+  assert.deepEqual(loaded, preferences);
+  const effective = resolvePreferences(loaded, 'folder/tune.abc');
+  assert.equal(effective.tempo, 75);
+  assert.equal(effective.notation.instrumentKey, 'Bb');
+  assert.equal(effective.transposition.semitones, 2);
+  assert.equal(resolvePreferences(loaded, 'another.abc').tempo, undefined);
+  assert.equal(Object.hasOwn(resolvePreferences({ version: 1 }, 'fixture.abc'), 'tempo'), false);
+  delete loaded.files['folder/tune.abc'].tempo;
+  assert.equal(resolvePreferences(parsePreferences(serializePreferences(loaded)), 'folder/tune.abc').tempo, undefined);
+  assert.deepEqual(preferences, before);
 });
 test('array filters combine exact case-sensitive IDs and case-insensitive regex with OR', () => {
   for (const [filter, expected] of [

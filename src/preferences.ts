@@ -23,6 +23,7 @@ export interface PersonalChoices {
 }
 export interface FileChoices extends PersonalChoices {
   transposition?: { semitones?: number };
+  tempo?: number;
 }
 export interface Preferences {
   version: 1;
@@ -34,6 +35,7 @@ export interface EffectiveChoices {
   playback: VoiceFilter;
   notation: Notation;
   transposition: { semitones: number };
+  tempo?: number;
 }
 export interface VoiceDescriptor { id: string; name?: string; shortName?: string }
 export interface FilterResult { ids: string[]; notices: string[] }
@@ -52,6 +54,11 @@ function fields(value: Record<string, unknown>, allowed: string[], location: str
 function integer(value: unknown, min: number, max: number, location: string): void {
   if (!Number.isInteger(value) || typeof value !== 'number' || value < min || value > max) {
     throw new Error(`${location} must be an integer between ${min} and ${max}`);
+  }
+}
+export function validateTempo(value: unknown, location = 'tempo'): asserts value is number | undefined {
+  if (value !== undefined && (typeof value !== 'number' || !Number.isFinite(value) || !Number.isInteger(value) || value < 1)) {
+    throw new Error(`${location} must be a whole number of at least 1 BPM, or blank for the original tempo.`);
   }
 }
 export function validateResourceKey(key: string): string {
@@ -96,7 +103,7 @@ function validateNotation(value: unknown, location: string, perVoice = false): v
 }
 export function validateChoices(value: unknown, perFile = true, location = 'choices'): FileChoices {
   const choices = object(value, location);
-  fields(choices, perFile ? ['display', 'playback', 'notation', 'transposition'] : ['display', 'playback', 'notation'], location);
+  fields(choices, perFile ? ['display', 'playback', 'notation', 'transposition', 'tempo'] : ['display', 'playback', 'notation'], location);
   if (choices.display !== undefined) validateFilter(choices.display, `${location}.display`);
   if (choices.playback !== undefined) validateFilter(choices.playback, `${location}.playback`);
   if (choices.notation !== undefined) validateNotation(choices.notation, `${location}.notation`);
@@ -105,6 +112,7 @@ export function validateChoices(value: unknown, perFile = true, location = 'choi
     fields(shift, ['semitones'], `${location}.transposition`);
     if (shift.semitones !== undefined) integer(shift.semitones, -24, 24, `${location}.transposition.semitones`);
   }
+  validateTempo(choices.tempo, `${location}.tempo`);
   return choices as FileChoices;
 }
 export function validatePreferences(value: unknown): Preferences {
@@ -148,7 +156,8 @@ export function resolvePreferences(preferences: Preferences, resourceKey: string
     display: { voiceIdFilter: [], voiceIdRegexFilter: [], ...defaults.display, ...override.display },
     playback: { voiceIdFilter: [], voiceIdRegexFilter: [], ...defaults.playback, ...override.playback },
     notation,
-    transposition: { semitones: override.transposition?.semitones ?? 0 }
+    transposition: { semitones: override.transposition?.semitones ?? 0 },
+    ...(override.tempo === undefined ? {} : { tempo: override.tempo })
   };
 }
 /** Run untrusted regex matching in a cancellable worker, never on a UI thread. */
