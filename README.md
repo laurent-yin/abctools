@@ -118,6 +118,10 @@ scales later authored tempo changes proportionally. Applying playback speed and
 discovering the source tempo remain renderer responsibilities; resolving these
 preferences never changes the ABC source or the CLI's ordinary exports.
 
+The global-only `defaults.highlightCurrentMeasure` boolean enables a subtle
+current-measure background during playback (default: `true`). It applies to
+both sheet music and chord grids, without changing notes, chords or exports.
+
 Chord-grid preferences also use version 1:
 
 ```json

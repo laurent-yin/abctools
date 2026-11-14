@@ -9,6 +9,20 @@ import os from 'node:os';
 import path from 'node:path';
 
 const voices = [{ id: 'melody' }, { id: 'bass' }];
+test('current measure highlighting is enabled by default and is a global-only boolean', () => {
+  assert.equal(resolvePreferences({ version: 1 }, 'one.abc').highlightCurrentMeasure, true);
+  for (const enabled of [false, true]) {
+    const value = { version: 1, defaults: { highlightCurrentMeasure: enabled } };
+    const parsed = parsePreferences(serializePreferences(value));
+    for (const key of ['one.abc', 'two.abc']) {
+      assert.equal(resolvePreferences(parsed, key).highlightCurrentMeasure, enabled);
+    }
+  }
+  assert.throws(() => validateChoices({ highlightCurrentMeasure: false }), /Unknown preference/);
+  for (const value of ['false', 0, null]) {
+    assert.throws(() => validateChoices({ highlightCurrentMeasure: value }, false), /must be boolean/);
+  }
+});
 test('simple default exclusions match IDs and names without regex semantics', () => {
   const named = [{ id: 'lead', name: 'Melody' }, { id: 'low', name: 'Bass Counterpoint' }];
   for (const [pattern, expected] of [['', ['lead', 'low']], ['*BASS*', ['lead']], ['l?w', ['lead']], ['*', []], ['missing', ['lead', 'low']], ['[low]', ['lead', 'low']]]) {

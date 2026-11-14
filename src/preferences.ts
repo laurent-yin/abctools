@@ -22,6 +22,7 @@ export interface ChordGridSettings {
   showTextInstructions: boolean;
 }
 export interface PersonalChoices {
+  highlightCurrentMeasure?: boolean;
   display?: VoiceFilter;
   playback?: VoiceFilter & { chords?: boolean };
   notation?: Notation;
@@ -38,6 +39,7 @@ export interface Preferences {
   files?: Record<string, FileChoices>;
 }
 export interface EffectiveChoices {
+  highlightCurrentMeasure: boolean;
   display: VoiceFilter;
   playback: VoiceFilter;
   notation: Notation;
@@ -112,7 +114,10 @@ function validateNotation(value: unknown, location: string, perVoice = false): v
 }
 export function validateChoices(value: unknown, perFile = true, location = 'choices'): FileChoices {
   const choices = object(value, location);
-  fields(choices, perFile ? ['display', 'playback', 'notation', 'transposition', 'tempo', 'chordSourceVoiceId'] : ['display', 'playback', 'notation', 'chordGrid'], location);
+  fields(choices, perFile ? ['display', 'playback', 'notation', 'transposition', 'tempo', 'chordSourceVoiceId'] : ['display', 'playback', 'notation', 'chordGrid', 'highlightCurrentMeasure'], location);
+  if (choices.highlightCurrentMeasure !== undefined && typeof choices.highlightCurrentMeasure !== 'boolean') {
+    throw new Error(`${location}.highlightCurrentMeasure must be boolean`);
+  }
   if (choices.display !== undefined) validateFilter(choices.display, `${location}.display`);
   if (choices.playback !== undefined) validateFilter(choices.playback, `${location}.playback`);
   if (choices.notation !== undefined) validateNotation(choices.notation, `${location}.notation`);
@@ -172,6 +177,7 @@ export function resolvePreferences(preferences: Preferences, resourceKey: string
   }
   notation.voices = voices;
   return {
+    highlightCurrentMeasure: defaults.highlightCurrentMeasure ?? true,
     display: { voiceIdFilter: [], voiceIdRegexFilter: [], ...defaults.display, ...override.display },
     playback: { voiceIdFilter: [], voiceIdRegexFilter: [], ...defaults.playback, ...override.playback },
     notation,
