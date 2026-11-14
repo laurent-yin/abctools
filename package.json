@@ -1,6 +1,6 @@
 {
   "name": "abctools",
-  "version": "0.2.1",
+  "version": "0.2.5",
   "description": "Provides utilities for music repositories using the ABC music notation, including a CLI tool to compile .raw.abc files with directives from .abcconfig files.",
   "type": "module",
   "main": "dist/assemble.js",
@@ -32,6 +32,10 @@
     "./preferences": {
       "types": "./dist/preferences.d.ts",
       "default": "./dist/preferences.js"
+    },
+    "./chord-grid": {
+      "types": "./dist/chordGrid.d.ts",
+      "default": "./dist/chordGrid.js"
     },
     "./config-text": {
       "types": "./dist/configText.d.ts",

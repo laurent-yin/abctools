@@ -16,14 +16,21 @@ export interface VoiceNotation {
 export interface Notation extends VoiceNotation {
   voices?: Record<string, VoiceNotation>;
 }
+export interface ChordGridSettings {
+  layout: 'source' | 'compact';
+  repeatMeasures: boolean;
+  showTextInstructions: boolean;
+}
 export interface PersonalChoices {
   display?: VoiceFilter;
   playback?: VoiceFilter & { chords?: boolean };
   notation?: Notation;
+  chordGrid?: Partial<ChordGridSettings>;
 }
 export interface FileChoices extends PersonalChoices {
   transposition?: { semitones?: number };
   tempo?: number;
+  chordSourceVoiceId?: string;
 }
 export interface Preferences {
   version: 1;
@@ -36,6 +43,8 @@ export interface EffectiveChoices {
   notation: Notation;
   transposition: { semitones: number };
   tempo?: number;
+  chordGrid: ChordGridSettings;
+  chordSourceVoiceId?: string;
 }
 export interface VoiceDescriptor { id: string; name?: string; shortName?: string }
 export interface FilterResult { ids: string[]; notices: string[] }
@@ -103,10 +112,20 @@ function validateNotation(value: unknown, location: string, perVoice = false): v
 }
 export function validateChoices(value: unknown, perFile = true, location = 'choices'): FileChoices {
   const choices = object(value, location);
-  fields(choices, perFile ? ['display', 'playback', 'notation', 'transposition', 'tempo'] : ['display', 'playback', 'notation'], location);
+  fields(choices, perFile ? ['display', 'playback', 'notation', 'transposition', 'tempo', 'chordSourceVoiceId'] : ['display', 'playback', 'notation', 'chordGrid'], location);
   if (choices.display !== undefined) validateFilter(choices.display, `${location}.display`);
   if (choices.playback !== undefined) validateFilter(choices.playback, `${location}.playback`);
   if (choices.notation !== undefined) validateNotation(choices.notation, `${location}.notation`);
+  if (choices.chordSourceVoiceId !== undefined && (typeof choices.chordSourceVoiceId !== 'string' || !choices.chordSourceVoiceId || choices.chordSourceVoiceId.length > 512)) {
+    throw new Error(`${location}.chordSourceVoiceId must be a nonempty voice ID (at most 512 characters)`);
+  }
+  if (choices.chordGrid !== undefined) {
+    const grid = object(choices.chordGrid, `${location}.chordGrid`);
+    fields(grid, ['layout', 'repeatMeasures', 'showTextInstructions'], `${location}.chordGrid`);
+    if (grid.layout !== undefined && grid.layout !== 'source' && grid.layout !== 'compact') throw new Error(`${location}.chordGrid.layout must be source or compact`);
+    if (grid.repeatMeasures !== undefined && typeof grid.repeatMeasures !== 'boolean') throw new Error(`${location}.chordGrid.repeatMeasures must be boolean`);
+    if (grid.showTextInstructions !== undefined && typeof grid.showTextInstructions !== 'boolean') throw new Error(`${location}.chordGrid.showTextInstructions must be boolean`);
+  }
   if (choices.transposition !== undefined) {
     const shift = object(choices.transposition, `${location}.transposition`);
     fields(shift, ['semitones'], `${location}.transposition`);
@@ -156,6 +175,12 @@ export function resolvePreferences(preferences: Preferences, resourceKey: string
     display: { voiceIdFilter: [], voiceIdRegexFilter: [], ...defaults.display, ...override.display },
     playback: { voiceIdFilter: [], voiceIdRegexFilter: [], ...defaults.playback, ...override.playback },
     notation,
+    chordGrid: {
+      layout: defaults.chordGrid?.layout ?? 'source',
+      repeatMeasures: defaults.chordGrid?.repeatMeasures ?? true,
+      showTextInstructions: defaults.chordGrid?.showTextInstructions ?? false
+    },
+    ...(override.chordSourceVoiceId === undefined ? {} : { chordSourceVoiceId: override.chordSourceVoiceId }),
     transposition: { semitones: override.transposition?.semitones ?? 0 },
     ...(override.tempo === undefined ? {} : { tempo: override.tempo })
   };
@@ -208,6 +233,7 @@ export function wildcardMatches(pattern: string, text: string): boolean {
 export function refreshFileVoices(choices: FileChoices, defaults: EffectiveChoices, voices: VoiceDescriptor[]): FileChoices {
   const result = structuredClone(choices);
   const ids = [...new Set(voices.map(voice => voice.id))];
+  if (result.chordSourceVoiceId !== undefined && !ids.includes(result.chordSourceVoiceId)) delete result.chordSourceVoiceId;
   for (const operation of ['display', 'playback'] as const) {
     const filter = choices[operation];
     if (!filter) continue;

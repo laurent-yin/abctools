@@ -54,13 +54,18 @@ abctools --help
 The existing Node `getEffectiveAbcConfig(root, file, content?)` API and CLI
 continue to assemble shared engraving configuration without personal preferences.
 
-Two browser-safe ES module entry points are available:
+Browser-safe ES module entry points are available:
 
 - `abctools/config-text`: `assembleAbcText(content, parentToChildConfigs)` merges
   supplied configuration text without accessing a filesystem. It returns
   `{ mergedDirectives, body }` with the source line-ending convention.
 - `abctools/preferences`: versioned JSON validation/serialization, relative-path
   validation, property-wise resolution and independent voice-filter resolution.
+- `abctools/chord-grid`: portable measure/chord/annotation types,
+  `prepareGridMeasures(measures, repeatMeasures)` for harmonic continuation and
+  whole-measure repetition, and `layoutGridRows(measures, widths, width, layout)`
+  for source-line or compact layouts. The client supplies parsed musical events
+  and measured text widths; no ABC parser, DOM or rendering engine is required.
 
 ```js
 import { parsePreferences, resolvePreferences, resolveVoiceFilter } from 'abctools/preferences';
@@ -112,6 +117,54 @@ The client interprets the override in the initial tune's `Q:` beat unit and
 scales later authored tempo changes proportionally. Applying playback speed and
 discovering the source tempo remain renderer responsibilities; resolving these
 preferences never changes the ABC source or the CLI's ordinary exports.
+
+Chord-grid preferences also use version 1:
+
+```json
+{
+  "version": 1,
+  "defaults": {
+    "chordGrid": {
+      "layout": "source",
+      "repeatMeasures": true,
+      "showTextInstructions": false
+    }
+  },
+  "files": {
+    "collection/tune.abc": { "chordSourceVoiceId": "melody" }
+  }
+}
+```
+
+`chordGrid` is global-only; omitted fields resolve to source lines and repeated
+measures enabled, with text instructions hidden. `showTextInstructions: true`
+lets clients include authored text annotations such as `a tempo` and `rall.`;
+it never enables note ornaments or fermatas. `layout: "compact"` enables wrapping using client-supplied
+widths. `chordSourceVoiceId` is file-only; omission means the client's first
+declared voice. Inventory refresh drops a source ID only when it disappears,
+not when its voice name changes. The client must report unavailable/chordless
+sources and source resets rather than silently substitute a different harmony.
+
+Grid times use the caller's consistent musical unit. Each measure has a
+positive `duration`, absolute `start`, relative chord/annotation times, start/end
+bar types and optional source/section breaks and source IDs. Preparation copies
+its input, carries a previous harmony to time zero when needed, leaves empty
+opening measures empty, and compares duration plus effective harmonic rhythm.
+Consecutive redundant labels do not change that rhythm. `%` never replaces
+annotations and is disabled across sections, repeat bars and alternative-ending
+starts. N.C. is preserved as an explicit harmony value. Measures marked `pickup`
+by the parser adapter are omitted entirely. Their annotations, repeat starts and
+layout boundaries move to the next visible measure, while its original timing
+is preserved. Authored pickup chords still establish the harmony for following
+measures without changing the source or audio.
+`formatGridChord` splits conventional labels into root, suffix and optional
+slash bass for presentation. It formats accidentals and trailing alterations
+(`Bm7b5` becomes `{root: "B", suffix: "m7(♭5)"}`), but does not mutate the musical
+model. It returns `undefined` for literal or unrecognized labels such as `N.C.`;
+clients display those unchanged. Extension slashes such as `C6/9` are not basses.
+Layout returns arrays of measure indices; source layout retains authored groups,
+compact layout packs widths, and both respect section boundaries. Oversized
+measures get their own compact row rather than being clipped or shrunk.
 
 These entry points import no Node, DOM, database or VS Code APIs. Filesystem,
 database, permissions, concurrency and synchronization belong to client adapters.
