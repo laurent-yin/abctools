@@ -11,7 +11,8 @@ import('../dist/assemble.js').then(mod => {
     console.log('\nInputs:');
     console.log('  - One or more .raw.abc files in <sourceDir>');
     console.log('  - Typically, each folder contains one .abcconfig file.');
-    console.log('  - .abcconfig files only contain ABC directives (commands prefixed by %% such as %%pagewidth) and comments (prefixed by %, e.g. % this is a comment).');
+    console.log('  - .abcconfig files contain ABC directives (%%), comments (%) and optional %%template name / %%endtemplate definitions.');
+    console.log('  - Use {{name}} on a dedicated line or inline in music; inline calls preserve music line breaks.');
     console.log('  - Directives in .abcconfig files in child folders override those in parent folders.');
     console.log('\nOutputs:');
     console.log('  - .abc files generated in <outDir>');

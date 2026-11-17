@@ -1,6 +1,6 @@
 import * as path from 'path';
 import * as fs from 'fs';
-import { ParsedLine, parseFlatDirectives, mergeFlatDirectives, stringifyParsedLines, extractDirectivesAndBody } from './configText.js';
+import { ParsedLine, parseFlatDirectives, mergeFlatDirectives, assembleParsedAbcText } from './configText.js';
 export { ParsedLine, parseFlatDirectives, mergeFlatDirectives, stringifyParsedLines, extractDirectivesAndBody } from './configText.js';
 
 // Revised flat-line-based directive merger with comment preservation
@@ -39,10 +39,7 @@ export function getEffectiveAbcConfig(
 
   // Use provided fileContent if given, otherwise read from file
   const abcText = fileContent != null ? fileContent : fs.readFileSync(rawAbcFilePath, 'utf8');
-  const { directives: abcDirectives, body, lineEnding } = extractDirectivesAndBody(abcText);
-  const mergedDirectives = mergeFlatDirectives([...mergedDirectivesLines], abcDirectives);
-
-  return { mergedDirectives: stringifyParsedLines(mergedDirectives, lineEnding), body };
+  return assembleParsedAbcText(abcText, mergedDirectivesLines, rawAbcFilePath);
 }
 
 /**
@@ -53,7 +50,7 @@ export function getMergedConfigParsedLines(rootDir: string, fileDir: string): Pa
   let mergedDirectives: ParsedLine[] = [];
   for (const file of abcConfFiles) {
     const content = fs.readFileSync(file, 'utf8');
-    const parsed = parseFlatDirectives(content);
+    const parsed = parseFlatDirectives(content, file);
     mergedDirectives = mergeFlatDirectives(mergedDirectives, parsed);
   }
   return mergedDirectives;

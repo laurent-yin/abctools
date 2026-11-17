@@ -23,7 +23,7 @@ abctools export <sourceDir> <outDir>
 
 #### How it works
 - Typically, each folder in `<sourceDir>` contains one `.abcconfig` file.
-- `.abcconfig` files only contain ABC directives (commands prefixed by `%%`, such as `%%pagewidth`) and comments (prefixed by `%`, e.g. `% this is a comment`).
+- `.abcconfig` files contain ABC directives (commands prefixed by `%%`, such as `%%pagewidth`), comments, and optional named templates.
 - These directives are applied to all `.raw.abc` files in that folder.
 - Directives in a parent folder's, for example `.someParent.abcconfig` can be overridden by directives in `.someChild.abcconfig` files in child folders. This allows for hierarchical configuration.
 - The export process maintains the folder structure of `<sourceDir>` and mirrors it in `<outDir>`. All generated `.abc` files will be placed in the corresponding subfolders of `<outDir>`.
@@ -48,6 +48,77 @@ To see available commands:
 ```sh
 abctools --help
 ```
+
+## Named templates
+
+Define reusable ABC text in any `.abcconfig` file, or directly in a `.raw.abc`
+file before its first `K:` field:
+
+```abc
+%%template polca
+%%MIDI gchordon
+%%MIDI gchord fzccfzcz
+%%endtemplate
+
+%%template break final
+%%MIDI gchord fzzz
+%%endtemplate
+```
+
+Use `{{name}}` where that text belongs. Calls are case-sensitive; names accept
+Unicode letters, numbers, spaces, `.`, `_` and `-`, with no reserved letters.
+Surrounding spaces in a name are ignored.
+
+```abc
+[V:melody] {{polca}} "G"G2 B2 | {{break final}} "D7"A4 | {{polca}} "G"G4 |]
+```
+
+Inside a music line, commands become inline instructions, without adding line
+breaks. The beginning of this example becomes:
+
+```abc
+[V:melody] [I:MIDI gchordon] [I:MIDI gchord fzccfzcz] "G"G2 B2 |
+```
+
+`%%command` and `I:command` become `[I:command]`; compatible ABC fields retain
+their own syntax, e.g. `M:3/4` becomes `[M:3/4]`, not `[I:M:3/4]`.
+Existing inline instructions are accepted too. Blank lines and ordinary `%`
+comments in a definition are omitted for inline insertion.
+
+When a call is alone on its line (optionally followed by a `%` comment), its
+content is inserted unchanged, including comments and line breaks. This permits
+header fields, musical fragments and multiline blocks:
+
+```abc
+%%template introduction
+%%begintext
+Play lightly.
+%%endtext
+%%endtemplate
+```
+
+The template's context still matters: an `X:`, `K:` or block must be valid at its
+insertion point. Inline calls reject music, non-inline fields, multiline blocks,
+include/selector directives, syntax-changing directives, and instruction values
+containing square brackets; put those calls on a dedicated line instead.
+Other commands keep the target reader's own semantics and support requirements:
+acceptance does not guarantee a time-local change. In particular, abc2svg's MIDI
+`chordprog`/`chordvol` are not passage-local changes, `bassprog` may be unsupported,
+and text/layout instructions may change the score layout.
+
+Definitions inherit from parent directories; child directories override them,
+then file-local definitions override both. A replacement replaces the **whole
+template**, never individual lines. Definitions are removed from exported ABC;
+their contents are expanded after ordinary configuration merging, so multiple
+MIDI commands inside a template stay together and in order.
+
+Unknown calls, invalid names, duplicate definitions in one file, missing closing
+markers, nested definitions and template-to-template calls throw errors.
+There are no conditions, scripts, parameters or recursive expansion.
+Calls in quoted annotations/chords, comments, metadata, lyrics, existing
+bracketed fields/chords and `%%begin…`/`%%end…` blocks remain literal.
+The portable API, filesystem API and CLI all use the same expansion engine;
+it has no dependency on abc2svg or a browser.
 
 ## Portable application APIs
 
